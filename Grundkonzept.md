@@ -10,6 +10,10 @@ Das Backend ist zusätzlich intern in eine 3-Schichten-Architektur unterteilt:
 
 Für die Datenbank wurde mit PostgreSQL umgesetzt.
 
+### Security
+#### Authentifizierung
+Ein User soll mit JWT in einem HttpOnly Cookie authentifiziert werden.
+
 ### Dependencies
 #### Spring Data JPA
 Die Spring Data JPA wird Datenbank Abfragen um einiges erleichtern, ähnlich wie EF Core in der .NET Welt.
