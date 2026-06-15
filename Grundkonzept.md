@@ -1,7 +1,7 @@
 ### Architekturentscheidung
 Unsere Anwendung basiert auf einer klassischen Client-Server-Architektur mit einer klaren Trennung zwischen Frontend und Backend.
 
-Das Frontend wurde mit React umgesetzt und übernimmt die Benutzeroberfläche. Das Backend wurde mit Spring Boot implementiert und stellt eine REST-API zur Verfügung.
+Das Frontend wurde mit React umgesetzt und übernimmt die Benutzeroberfläche. Das Backend wurde mit ASP.NET Core und stellt eine REST-API zur Verfügung.
 
 Das Backend ist zusätzlich intern in eine 3-Schichten-Architektur unterteilt:
 - Controller (API)
@@ -14,12 +14,5 @@ Für die Datenbank wurde mit PostgreSQL umgesetzt.
 #### Authentifizierung
 Ein User soll mit JWT in einem HttpOnly Cookie authentifiziert werden.
 
-### Dependencies
-#### Spring Data JPA
-Die Spring Data JPA wird Datenbank Abfragen um einiges erleichtern, ähnlich wie EF Core in der .NET Welt.
-
-#### Spring Web
-Spring Web erlaubt uns im Backend eine REST API, die Daten an das Frontend gibt, zu erstellen.
-
-#### Lombok
-Lombok hilft dabei "Boilerplate-Code" zu reduzieren.
+#### Connection
+Kommunikation zwischen Frontend und Backend laufen mittels HTTPS ab damit dei daten auf dem Weg encrypted sind.

@@ -1,10 +1,10 @@
-FROM maven:3.9.8-eclipse-temurin-21 AS dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS dev
 
 WORKDIR /app
 
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY *.csproj .
+RUN dotnet restore
 
-COPY src ./src
+COPY . .
 
-CMD ["mvn", "spring-boot:run"]
+CMD ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:8080"]

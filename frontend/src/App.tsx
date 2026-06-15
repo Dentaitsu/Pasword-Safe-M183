@@ -18,7 +18,7 @@ function App() {
         <div>
           <h1>Get started</h1>
           <p>
-            Hello World
+            Hello World!
           </p>
         </div>
         <button
