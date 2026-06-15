@@ -22,13 +22,17 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     environment:
-      DB_URL: jdbc:postgresql://db:5432/passwordmanager
+      DB_HOST: db
+      DB_NAME: passwordmanager
       DB_USER: admin
       DB_PASSWORD: secret
+      ASPNETCORE_ENVIRONMENT: Development
     ports:
       - "8080:8080"
     volumes:
-      - ./backend/src:/app/src
+      - ./backend:/app
+      - /app/obj
+      - /app/bin
     depends_on:
       db:
         condition: service_healthy
