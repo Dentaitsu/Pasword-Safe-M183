@@ -6,7 +6,7 @@ Das Frontend wurde mit React umgesetzt und übernimmt die Benutzeroberfläche. D
 Das Backend ist zusätzlich intern in eine 3-Schichten-Architektur unterteilt:
 - Controller (API)
 - Service (Business Logik)
-- Repository (Datenzugriff)
+- Data (DbContext für Datenbank Zugriff)
 
 Für die Datenbank wurde mit PostgreSQL umgesetzt.
 
