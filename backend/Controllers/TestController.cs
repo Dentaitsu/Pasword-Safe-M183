@@ -13,10 +13,10 @@ public class TestController : ControllerBase
     public TestController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAllTestEntriesAsync()
         => Ok(await _mediator.Send(new GetAllTestEntriesQuery()));
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateTestEntryCommand command)
+    public async Task<IActionResult> CreateTestEntryAsync([FromBody] CreateTestEntryCommand command)
         => Ok(await _mediator.Send(command));
 }
