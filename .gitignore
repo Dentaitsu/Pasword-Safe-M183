@@ -766,3 +766,6 @@ secrets.json
 
 # Docker Compose
 docker-compose.override.yml
+
+# json
+package-lock.json
