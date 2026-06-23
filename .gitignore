@@ -772,3 +772,6 @@ frontend/src/api/
 
 # OpenAPI Generator
 frontend/.openapi-generator/
+
+# json
+package-lock.json
