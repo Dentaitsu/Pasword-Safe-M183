@@ -766,3 +766,9 @@ secrets.json
 
 # Docker Compose
 docker-compose.override.yml
+
+# Generated API
+frontend/src/api/
+
+# OpenAPI Generator
+frontend/.openapi-generator/

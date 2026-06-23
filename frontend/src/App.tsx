@@ -1,51 +1,44 @@
 import { useEffect, useState } from "react";
+import { TestApi, type TestEntry } from "./api";
 
-interface TestEntry {
-  id: number;
-  message: string;
-}
+const testApi = new TestApi();
 
 function App() {
-  const [entries, setEntries] = useState<TestEntry[]>([]);
-  const [input, setInput] = useState("");
+    const [entries, setEntries] = useState<TestEntry[]>([]);
+    const [input, setInput] = useState("");
 
-  const fetchEntries = async () => {
-    const res = await fetch("http://localhost:8080/api/entries");
-    const data = await res.json();
-    setEntries(data);
-  };
+    const fetchEntries = async () => {
+        const result = await testApi.testGetAllTestEntries();
+        setEntries(result);
+    };
 
-  const addEntry = async () => {
-    if (!input.trim()) return;
-    await fetch("http://localhost:8080/api/entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: input }),
-    });
-    setInput("");
-    fetchEntries();
-  };
+    const addEntry = async () => {
+        if (!input.trim()) return;
+        await testApi.testCreateTestEntry({ createTestEntryCommand: { message: input } });
+        setInput("");
+        fetchEntries();
+    };
 
-  useEffect(() => {
-    fetchEntries();
-  }, []);
+    useEffect(() => {
+        fetchEntries();
+    }, []);
 
-  return (
-    <div style={{ padding: "2rem" }}>
-      <h1>DB Test</h1>
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Enter a message"
-      />
-      <button onClick={addEntry}>Save</button>
-      <ul>
-        {entries.map((e) => (
-          <li key={e.id}>{e.message}</li>
-        ))}
-      </ul>
-    </div>
-  );
+    return (
+        <div style={{ padding: "2rem" }}>
+            <h1>DB Test</h1>
+            <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Enter a message"
+            />
+            <button onClick={addEntry}>Save</button>
+            <ul>
+                {entries.map((e, i) => (
+                    <li key={i}>{e.message}</li>
+                ))}
+            </ul>
+        </div>
+    );
 }
 
 export default App;
