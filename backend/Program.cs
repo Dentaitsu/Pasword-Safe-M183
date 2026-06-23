@@ -3,7 +3,14 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApiDocument(config =>
+{
+    config.Title = "Password Manager API";
+    config.Version = "v1";
+    config.UseControllerSummaryAsTagDescription = false;
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -40,5 +47,10 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors();
 app.MapControllers();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseOpenApi();
+}
 
 app.Run();
