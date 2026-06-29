@@ -1,22 +1,22 @@
-﻿using backend.Models;
+using backend.Models;
+using backend.Services.Security;
 
 namespace backend.Data;
 
 public static class DbInitializer
 {
-    public static async Task InitializeAsync(AppDbContext db)
+    public static async Task InitializeAsync(AppDbContext db, IPasswordHasher hasher)
     {
         await db.Database.EnsureDeletedAsync();
         await db.Database.EnsureCreatedAsync();
 
-        var entries = new List<TestEntry>
+        var admin = new User
         {
-            new() { Message = "Test Entry 1" },
-            new() { Message = "Test Entry 2" },
-            new() { Message = "Test Entry 3" },
+            Username = "admin",
+            PasswordHash = hasher.Hash("ChangeMe123!"),
         };
 
-        db.TestEntries.AddRange(entries);
+        db.Users.Add(admin);
         await db.SaveChangesAsync();
     }
 }

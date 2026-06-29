@@ -31,6 +31,11 @@
   margin-bottom: 16px;
 }
 
+.app-header div {
+  display: flex;
+  gap: 8px;
+}
+
 .app-header h1 {
   font-size: 28px;
   margin: 0;

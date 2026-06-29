@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { login as apiLogin } from './api/auth'
+import { login as apiLogin, logout as apiLogout } from './api/auth'
 import { AUTH_EXPIRED_EVENT, ApiError } from './api/client'
 import {
   createPassword,
@@ -33,8 +33,10 @@ function App() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set())
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const clipboardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     function handleAuthExpired() {
@@ -48,9 +50,11 @@ function App() {
 
   useEffect(() => {
     if (page !== 'home') return
-    setLoadError(null)
     getPasswords()
-      .then(setEntries)
+      .then((data) => {
+        setEntries(data)
+        setLoadError(null)
+      })
       .catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 401) return
         setLoadError('Could not load passwords.')
@@ -63,12 +67,6 @@ function App() {
     const username = String(data.get('username') ?? '')
     const password = String(data.get('password') ?? '')
 
-    // dev-only bypass until POST /api/auth/login exists, remove once the backend is ready
-    if (username === 'admin' && password === '1234') {
-      setPage('home')
-      return
-    }
-
     setLoginPending(true)
     setLoginError(null)
     try {
@@ -79,6 +77,28 @@ function App() {
     } finally {
       setLoginPending(false)
     }
+  }
+
+  async function handleLogout() {
+    try {
+      await apiLogout()
+    } finally {
+      setPage('login')
+      setEntries([])
+    }
+  }
+
+  const CLIPBOARD_CLEAR_MS = 10_000
+
+  async function handleCopy(id: string, password: string) {
+    await navigator.clipboard.writeText(password)
+    setCopiedId(id)
+
+    if (clipboardTimeoutRef.current) clearTimeout(clipboardTimeoutRef.current)
+    clipboardTimeoutRef.current = setTimeout(() => {
+      setCopiedId(null)
+      navigator.clipboard.writeText('').catch(() => undefined)
+    }, CLIPBOARD_CLEAR_MS)
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -179,9 +199,14 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>Password Safe</h1>
-        <button type="button" onClick={handleAdd}>
-          Add
-        </button>
+        <div>
+          <button type="button" onClick={handleAdd}>
+            Add
+          </button>
+          <button type="button" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </header>
 
       {loadError && <p className="error">{loadError}</p>}
@@ -208,6 +233,9 @@ function App() {
               <td className="actions">
                 <button type="button" onClick={() => handleShowPswrd(entry.id)}>
                   {visibleIds.has(entry.id) ? 'Hide' : 'Show'}
+                </button>
+                <button type="button" onClick={() => handleCopy(entry.id, entry.password)}>
+                  {copiedId === entry.id ? 'Copied!' : 'Copy'}
                 </button>
                 <button type="button" onClick={() => handleEdit(entry)}>
                   Edit
