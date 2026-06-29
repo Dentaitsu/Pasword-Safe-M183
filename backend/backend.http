@@ -1,6 +1,12 @@
-@backend_HostAddress = http://localhost:5233
+@host = http://localhost:8080
 
-GET {{backend_HostAddress}}/weatherforecast/
-Accept: application/json
+### Get all entries
+GET {{host}}/api/test
 
-###
+### Create entry
+POST {{host}}/api/test
+Content-Type: application/json
+
+{
+    "message": "Hello from http file"
+}
