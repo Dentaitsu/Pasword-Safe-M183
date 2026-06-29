@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { login as apiLogin } from './api/auth'
+import { AUTH_EXPIRED_EVENT, ApiError } from './api/client'
+import {
+  createPassword,
+  deletePassword,
+  getPasswords,
+  updatePassword,
+  type PasswordEntry,
+  type PasswordInput,
+} from './api/passwords'
+import './App.css'
 
-interface PasswordEntry {
-  id: string
-  website: string
-  name: string
-  email: string
-  username: string
-  password: string
-}
+type Page = 'login' | 'home'
 
-type Page = 'login' | 'home' | 'form'
-
-const STORAGE_KEY = 'password-safe-entries'
-
-const emptyForm = {
+const emptyForm: PasswordInput = {
   website: '',
   name: '',
   email: '',
@@ -24,50 +24,83 @@ const emptyForm = {
 function App() {
   const [page, setPage] = useState<Page>('login')
   const [entries, setEntries] = useState<PasswordEntry[]>([])
-  const [form, setForm] = useState(emptyForm)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [loginPending, setLoginPending] = useState(false)
+
+  const [form, setForm] = useState<PasswordInput>(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set())
 
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      setEntries(JSON.parse(stored))
+    function handleAuthExpired() {
+      setPage('login')
+      setEntries([])
+      setLoginError('Your session expired, please log in again.')
     }
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
-  }, [entries])
+    if (page !== 'home') return
+    setLoadError(null)
+    getPasswords()
+      .then(setEntries)
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 401) return
+        setLoadError('Could not load passwords.')
+      })
+  }, [page])
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setPage('home')
+    const data = new FormData(e.currentTarget)
+    const username = String(data.get('username') ?? '')
+    const password = String(data.get('password') ?? '')
+
+    // dev-only bypass until POST /api/auth/login exists, remove once the backend is ready
+    if (username === 'admin' && password === '1234') {
+      setPage('home')
+      return
+    }
+
+    setLoginPending(true)
+    setLoginError(null)
+    try {
+      await apiLogin(username, password)
+      setPage('home')
+    } catch {
+      setLoginError('Login failed, please check your credentials.')
+    } finally {
+      setLoginPending(false)
+    }
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function openDialog() {
+    setFormError(null)
+    dialogRef.current?.showModal()
+  }
 
-    if (editingId) {
-      setEntries(entries.map((entry) =>
-        entry.id === editingId ? { ...entry, ...form } : entry
-      ))
-      setEditingId(null)
-    } else {
-      setEntries([...entries, { id: crypto.randomUUID(), ...form }])
-    }
-
+  function closeDialog() {
+    dialogRef.current?.close()
+    setEditingId(null)
     setForm(emptyForm)
-    setPage('home')
+    setFormError(null)
   }
 
   function handleAdd() {
     setEditingId(null)
     setForm(emptyForm)
-    setPage('form')
+    openDialog()
   }
 
   function handleEdit(entry: PasswordEntry) {
@@ -79,17 +112,33 @@ function App() {
       username: entry.username,
       password: entry.password,
     })
-    setPage('form')
+    openDialog()
   }
 
-  function handleDelete(id: string) {
-    setEntries(entries.filter((entry) => entry.id !== id))
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setFormError(null)
+    try {
+      if (editingId) {
+        const updated = await updatePassword(editingId, form)
+        setEntries(entries.map((entry) => (entry.id === editingId ? updated : entry)))
+      } else {
+        const created = await createPassword(form)
+        setEntries([...entries, created])
+      }
+      closeDialog()
+    } catch {
+      setFormError('Could not save this entry.')
+    }
   }
 
-  function handleCancel() {
-    setEditingId(null)
-    setForm(emptyForm)
-    setPage('home')
+  async function handleDelete(id: string) {
+    try {
+      await deletePassword(id)
+      setEntries(entries.filter((entry) => entry.id !== id))
+    } catch {
+      setLoadError('Could not delete this entry.')
+    }
   }
 
   function handleShowPswrd(id: string) {
@@ -106,75 +155,36 @@ function App() {
 
   if (page === 'login') {
     return (
-      <div>
-        <h1>Password Safe</h1>
-        <form onSubmit={handleLogin}>
-          <div>
-            <label>
-              Username
-              <input name="login-username" />
-            </label>
-          </div>
-          <div>
-            <label>
-              Password
-              <input name="login-password" type="password" />
-            </label>
-          </div>
-          <button type="submit">Login</button>
-        </form>
-      </div>
-    )
-  }
-
-  if (page === 'form') {
-    return (
-      <div>
-        <h1>{editingId ? 'Edit Password' : 'Add Password'}</h1>
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label>
-              Website
-              <input name="website" value={form.website} onChange={handleChange} required />
-            </label>
-          </div>
-          <div>
-            <label>
-              Name
-              <input name="name" value={form.name} onChange={handleChange} />
-            </label>
-          </div>
-          <div>
-            <label>
-              Email
-              <input name="email" type="email" value={form.email} onChange={handleChange} />
-            </label>
-          </div>
-          <div>
-            <label>
-              Username
-              <input name="username" value={form.username} onChange={handleChange} />
-            </label>
-          </div>
-          <div>
-            <label>
-              Password
-              <input name="password" type="password" value={form.password} onChange={handleChange} required />
-            </label>
-          </div>
-
-          <button type="submit">{editingId ? 'Save' : 'Add'}</button>
-          <button type="button" onClick={handleCancel}>Cancel</button>
+      <div className="login-page">
+        <form className="login-form" onSubmit={handleLogin}>
+          <h1>Password Safe</h1>
+          <label>
+            Username
+            <input name="username" autoComplete="username" required />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" autoComplete="current-password" required />
+          </label>
+          {loginError && <p className="error">{loginError}</p>}
+          <button type="submit" disabled={loginPending}>
+            {loginPending ? 'Logging in...' : 'Login'}
+          </button>
         </form>
       </div>
     )
   }
 
   return (
-    <div>
-      <h1>Password Safe</h1>
+    <div className="app">
+      <header className="app-header">
+        <h1>Password Safe</h1>
+        <button type="button" onClick={handleAdd}>
+          Add
+        </button>
+      </header>
 
-      <button type="button" onClick={handleAdd}>Add</button>
+      {loadError && <p className="error">{loadError}</p>}
 
       <table>
         <thead>
@@ -194,18 +204,64 @@ function App() {
               <td>{entry.name}</td>
               <td>{entry.email}</td>
               <td>{entry.username}</td>
-              <td>{visibleIds.has(entry.id) ? entry.password : '••••••••'}</td>
-              <td>
+              <td className="password-cell">{visibleIds.has(entry.id) ? entry.password : '••••••••'}</td>
+              <td className="actions">
                 <button type="button" onClick={() => handleShowPswrd(entry.id)}>
                   {visibleIds.has(entry.id) ? 'Hide' : 'Show'}
                 </button>
-                <button type="button" onClick={() => handleEdit(entry)}>Edit</button>
-                <button type="button" onClick={() => handleDelete(entry.id)}>Delete</button>
+                <button type="button" onClick={() => handleEdit(entry)}>
+                  Edit
+                </button>
+                <button type="button" className="danger" onClick={() => handleDelete(entry.id)}>
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
+          {entries.length === 0 && (
+            <tr>
+              <td colSpan={6} className="empty">
+                No passwords saved yet.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+
+      <dialog ref={dialogRef} onClose={closeDialog}>
+        <form onSubmit={handleSubmit}>
+          <h2>{editingId ? 'Edit Password' : 'Add Password'}</h2>
+          <label>
+            Website
+            <input name="website" value={form.website} onChange={handleChange} required />
+          </label>
+          <label>
+            Name
+            <input name="name" value={form.name} onChange={handleChange} />
+          </label>
+          <label>
+            Email
+            <input name="email" type="email" value={form.email} onChange={handleChange} />
+          </label>
+          <label>
+            Username
+            <input name="username" value={form.username} onChange={handleChange} />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" value={form.password} onChange={handleChange} required />
+          </label>
+
+          {formError && <p className="error">{formError}</p>}
+
+          <div className="dialog-actions">
+            <button type="submit">{editingId ? 'Save' : 'Add'}</button>
+            <button type="button" onClick={closeDialog}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </dialog>
     </div>
   )
 }
